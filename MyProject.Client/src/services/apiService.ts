@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import { Todo } from '../models/Todo';
 
 // Create an axios instance with default config
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json'

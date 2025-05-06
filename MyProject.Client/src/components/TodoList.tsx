@@ -1,4 +1,4 @@
-import { useTodoViewModel } from '../viewModels/useTodoViewModel';
+import { useTodoViewModel } from '../hooks/useTodoViewModel';
 import '../styles/TodoList.css';
 
 /**
