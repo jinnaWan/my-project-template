@@ -7,7 +7,7 @@ import { useTodoViewModel } from '../../hooks/useTodoViewModel';
 vi.mock('../../hooks/useTodoViewModel');
 
 describe('TodoList', () => {
-  const mockUseTodoViewModel = useTodoViewModel as jest.Mock;
+  const mockUseTodoViewModel = useTodoViewModel as unknown as ReturnType<typeof vi.fn>;
   
   const mockTodos = [
     { id: 1, title: 'Test Todo 1', isCompleted: false },
