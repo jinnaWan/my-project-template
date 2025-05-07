@@ -11,7 +11,7 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>My Project</h1>
+        <h1>My Project Template</h1>
       </header>
       
       <main className="app-content">
