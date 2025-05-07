@@ -79,7 +79,7 @@ describe('TodoService', () => {
   describe('getAllTodos', () => {
     it('should fetch all todos', async () => {
       // Setup the mock to return expected data
-      (mockedApiClient.get as any).mockResolvedValue({ data: mockTodos });
+      (mockedApiClient.get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockTodos });
       
       const result = await TodoService.getAllTodos();
       
@@ -90,7 +90,7 @@ describe('TodoService', () => {
     it('should handle errors', async () => {
       // Setup the mock to throw an error
       const networkError = new Error('Network Error');
-      (mockedApiClient.get as any).mockRejectedValue(networkError);
+      (mockedApiClient.get as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(networkError);
       
       await expect(TodoService.getAllTodos()).rejects.toThrow('Network Error');
     });
@@ -98,7 +98,7 @@ describe('TodoService', () => {
   
   describe('getTodoById', () => {
     it('should fetch a todo by id', async () => {
-      (mockedApiClient.get as any).mockResolvedValue({ data: mockTodo });
+      (mockedApiClient.get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockTodo });
       
       const result = await TodoService.getTodoById(1);
       
@@ -108,7 +108,7 @@ describe('TodoService', () => {
     
     it('should handle errors', async () => {
       const networkError = new Error('Network Error');
-      (mockedApiClient.get as any).mockRejectedValue(networkError);
+      (mockedApiClient.get as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(networkError);
       
       await expect(TodoService.getTodoById(1)).rejects.toThrow('Network Error');
     });
@@ -118,7 +118,7 @@ describe('TodoService', () => {
     const newTodo = { title: 'New Todo', isCompleted: false };
     
     it('should create a new todo', async () => {
-      (mockedApiClient.post as any).mockResolvedValue({ data: mockTodo });
+      (mockedApiClient.post as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockTodo });
       
       const result = await TodoService.createTodo(newTodo);
       
@@ -128,7 +128,7 @@ describe('TodoService', () => {
     
     it('should handle errors', async () => {
       const networkError = new Error('Network Error');
-      (mockedApiClient.post as any).mockRejectedValue(networkError);
+      (mockedApiClient.post as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(networkError);
       
       await expect(TodoService.createTodo(newTodo)).rejects.toThrow('Network Error');
     });
@@ -136,7 +136,7 @@ describe('TodoService', () => {
   
   describe('updateTodo', () => {
     it('should update a todo', async () => {
-      (mockedApiClient.put as any).mockResolvedValue({});
+      (mockedApiClient.put as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({});
       
       await TodoService.updateTodo(mockTodo);
       
@@ -145,7 +145,7 @@ describe('TodoService', () => {
     
     it('should handle errors', async () => {
       const networkError = new Error('Network Error');
-      (mockedApiClient.put as any).mockRejectedValue(networkError);
+      (mockedApiClient.put as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(networkError);
       
       await expect(TodoService.updateTodo(mockTodo)).rejects.toThrow('Network Error');
     });
@@ -153,7 +153,7 @@ describe('TodoService', () => {
   
   describe('deleteTodo', () => {
     it('should delete a todo', async () => {
-      (mockedApiClient.delete as any).mockResolvedValue({});
+      (mockedApiClient.delete as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({});
       
       await TodoService.deleteTodo(1);
       
@@ -162,7 +162,7 @@ describe('TodoService', () => {
     
     it('should handle errors', async () => {
       const networkError = new Error('Network Error');
-      (mockedApiClient.delete as any).mockRejectedValue(networkError);
+      (mockedApiClient.delete as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(networkError);
       
       await expect(TodoService.deleteTodo(1)).rejects.toThrow('Network Error');
     });

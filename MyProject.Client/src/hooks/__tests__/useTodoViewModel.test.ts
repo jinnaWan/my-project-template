@@ -25,11 +25,11 @@ describe('useTodoViewModel', () => {
     vi.clearAllMocks();
     
     // Default mock implementations
-    (TodoService.getAllTodos as any).mockResolvedValue(mockTodos);
-    (TodoService.createTodo as any).mockImplementation((todo: Omit<Todo, 'id'>) => 
+    (TodoService.getAllTodos as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockTodos);
+    (TodoService.createTodo as unknown as ReturnType<typeof vi.fn>).mockImplementation((todo: Omit<Todo, 'id'>) => 
       Promise.resolve({ id: 3, ...todo }));
-    (TodoService.updateTodo as any).mockResolvedValue(undefined);
-    (TodoService.deleteTodo as any).mockResolvedValue(undefined);
+    (TodoService.updateTodo as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (TodoService.deleteTodo as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   });
   
   it('should fetch todos on initialization', async () => {
@@ -49,7 +49,7 @@ describe('useTodoViewModel', () => {
   });
   
   it('should handle fetch todos error', async () => {
-    (TodoService.getAllTodos as any).mockRejectedValue(new Error('API error'));
+    (TodoService.getAllTodos as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API error'));
     
     const { result } = renderHook(() => useTodoViewModel());
     
