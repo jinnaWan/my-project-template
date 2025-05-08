@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using MyProject.Api.Data;
 using MyProject.Api.Services;
@@ -6,6 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Add DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Add Repository - Using SQL implementation with stored procedures
+builder.Services.AddScoped<ITodoRepository, SqlTodoRepository>();
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -18,7 +28,6 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Register application services
-builder.Services.AddSingleton<ITodoRepository, InMemoryTodoRepository>();
 builder.Services.AddScoped<ITodoService, TodoService>();
 builder.Services.AddSingleton<IWeatherForecastService, WeatherForecastService>();
 
@@ -34,6 +43,18 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Initialize and seed the database
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    
+    // Create database if it doesn't exist
+    dbContext.EnsureDatabaseCreated();
+    
+    // Seed initial data
+    dbContext.SeedData();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
