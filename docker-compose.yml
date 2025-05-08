@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "YourStrong@Passw0rd", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-network
+
+# Note: Use Azure Data Studio for database management: https://learn.microsoft.com/en-us/azure-data-studio/download-azure-data-studio
+# Connect with:
+#   Server: localhost,1433
+#   Authentication: SQL Login
+#   User: sa
+#   Password: YourStrong@Passw0rd
+#   Database: TodoDb (after application first run)
+
+volumes:
+  sqlserver_data:
+
+networks:
+  app-network:
+    driver: bridge 
