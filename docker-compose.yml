@@ -21,15 +21,13 @@ services:
     networks:
       - app-network
 
-  adminer:
-    image: adminer
-    container_name: adminer
-    ports:
-      - "8080:8080"
-    networks:
-      - app-network
-    depends_on:
-      - sqlserver
+# Note: Use Azure Data Studio for database management: https://learn.microsoft.com/en-us/azure-data-studio/download-azure-data-studio
+# Connect with:
+#   Server: localhost,1433
+#   Authentication: SQL Login
+#   User: sa
+#   Password: YourStrong@Passw0rd
+#   Database: TodoDb (after application first run)
 
 volumes:
   sqlserver_data:

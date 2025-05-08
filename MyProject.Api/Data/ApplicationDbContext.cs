@@ -11,6 +11,7 @@ namespace MyProject.Api.Data
         }
 
         public DbSet<Todo> Todos { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -25,6 +26,23 @@ namespace MyProject.Api.Data
                 entity.Property(e => e.IsCompleted).IsRequired();
                 entity.Property(e => e.CreatedAt).IsRequired();
                 entity.Property(e => e.UpdatedAt).IsRequired();
+            });
+            
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.ToTable("User");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.FirstName).HasMaxLength(50);
+                entity.Property(e => e.LastName).HasMaxLength(50);
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.UpdatedAt).IsRequired();
+                entity.Property(e => e.IsActive).IsRequired();
+                
+                // Create unique constraint on Username and Email
+                entity.HasIndex(e => e.Username).IsUnique();
+                entity.HasIndex(e => e.Email).IsUnique();
             });
             
             // Seed data can be added here if needed
@@ -46,6 +64,7 @@ namespace MyProject.Api.Data
         /// </summary>
         public void SeedData()
         {
+            // Seed Todos
             if (!Todos.Any())
             {
                 Todos.AddRange(
@@ -70,6 +89,35 @@ namespace MyProject.Api.Data
                         Title = "Implement CI/CD", 
                         Description = "Set up continuous integration and deployment",
                         IsCompleted = false,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    }
+                );
+                
+                SaveChanges();
+            }
+            
+            // Seed Users
+            if (!Users.Any())
+            {
+                Users.AddRange(
+                    new User
+                    {
+                        Username = "admin",
+                        Email = "admin@example.com",
+                        FirstName = "Admin",
+                        LastName = "User",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    },
+                    new User
+                    {
+                        Username = "user1",
+                        Email = "user1@example.com",
+                        FirstName = "Regular",
+                        LastName = "User",
+                        IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     }
