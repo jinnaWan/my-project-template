@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace MyProject.Api.Data.Repositories
 {
@@ -12,15 +13,18 @@ namespace MyProject.Api.Data.Repositories
         // Using new keyword to explicitly hide the base class field
         protected new readonly ApplicationDbContext _dbContext;
         protected readonly DbSet<T> _dbSet;
+        protected new readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the BaseRepository class
         /// </summary>
         /// <param name="dbContext">The database context</param>
-        protected BaseRepository(ApplicationDbContext dbContext) : base(dbContext)
+        /// <param name="logger">The logger</param>
+        protected BaseRepository(ApplicationDbContext dbContext, ILogger logger) : base(dbContext, logger)
         {
             _dbContext = dbContext;
             _dbSet = dbContext.Set<T>();
+            _logger = logger;
         }
 
         /// <inheritdoc />
@@ -59,42 +63,5 @@ namespace MyProject.Api.Data.Repositories
 
         /// <inheritdoc />
         public abstract Task<bool> DeleteAsync(int id);
-
-        /// <inheritdoc />
-        public virtual IEnumerable<T> GetAll()
-        {
-            return _dbSet.ToList();
-        }
-
-        /// <inheritdoc />
-        public virtual IEnumerable<T> Find(Expression<Func<T, bool>> filter)
-        {
-            return _dbSet.Where(filter).ToList();
-        }
-
-        /// <inheritdoc />
-        public virtual T? GetById(int id)
-        {
-            return _dbSet.Find(id);
-        }
-
-        /// <inheritdoc />
-        public virtual T Add(T entity)
-        {
-            _dbSet.Add(entity);
-            _dbContext.SaveChanges();
-            return entity;
-        }
-
-        /// <inheritdoc />
-        public virtual bool Update(T entity)
-        {
-            _dbSet.Attach(entity);
-            _dbContext.Entry(entity).State = EntityState.Modified;
-            return _dbContext.SaveChanges() > 0;
-        }
-
-        /// <inheritdoc />
-        public abstract bool Delete(int id);
     }
 } 

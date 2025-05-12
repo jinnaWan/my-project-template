@@ -8,37 +8,37 @@ namespace MyProject.Api.Data.Repositories
     public interface IUserRepository : IRepository<User>
     {
         /// <summary>
-        /// Gets a user by username
+        /// Gets a user by username asynchronously
         /// </summary>
         /// <param name="username">The username</param>
         /// <returns>The user if found; otherwise null</returns>
-        User? GetByUsername(string username);
+        Task<User?> GetByUsernameAsync(string username);
         
         /// <summary>
-        /// Gets a user by email
+        /// Gets a user by email asynchronously
         /// </summary>
         /// <param name="email">The email address</param>
         /// <returns>The user if found; otherwise null</returns>
-        User? GetByEmail(string email);
+        Task<User?> GetByEmailAsync(string email);
         
         /// <summary>
-        /// Gets all active users
+        /// Gets all active users asynchronously
         /// </summary>
         /// <returns>A collection of active users</returns>
-        IEnumerable<User> GetActiveUsers();
+        Task<IEnumerable<User>> GetActiveUsersAsync();
         
         /// <summary>
-        /// Activates a user
+        /// Activates a user asynchronously
         /// </summary>
         /// <param name="id">The user identifier</param>
         /// <returns>True if the operation was successful; otherwise false</returns>
-        bool ActivateUser(int id);
+        Task<bool> ActivateUserAsync(int id);
         
         /// <summary>
-        /// Deactivates a user
+        /// Deactivates a user asynchronously
         /// </summary>
         /// <param name="id">The user identifier</param>
         /// <returns>True if the operation was successful; otherwise false</returns>
-        bool DeactivateUser(int id);
+        Task<bool> DeactivateUserAsync(int id);
     }
 } 
