@@ -13,5 +13,4 @@ BEGIN
         UpdatedAt
     FROM Todo
     WHERE Id = @Id;
-END
-GO 
+END 

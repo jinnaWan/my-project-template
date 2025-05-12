@@ -1,78 +1,109 @@
-# Todo API with SQL Server Database
+# Todo App
 
-A simple Todo API with ASP.NET Core and SQL Server running in Docker.
+A modern todo application with a React frontend and .NET backend.
 
 ## Prerequisites
 
-- [Docker](https://www.docker.com/products/docker-desktop/)
-- [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
-- [Azure Data Studio](https://learn.microsoft.com/en-us/azure-data-studio/download-azure-data-studio) (for database management)
-
-## Quick Start
-
-```bash
-# Start the database, build and run the application
-make all
-```
-
-This will:
-1. Start SQL Server in a Docker container
-2. Build the application
-3. Run the application, which will create and seed the database automatically
-
-The API will be available at http://localhost:5000 or https://localhost:5001
-
-## Database Management
-
-This project uses SQL Server for data storage. We recommend using Azure Data Studio for database management.
-
-### Azure Data Studio
-
-1. Download and install [Azure Data Studio](https://learn.microsoft.com/en-us/azure-data-studio/download-azure-data-studio)
-2. Connect to the database using:
-   - Server: `localhost,1433`
-   - Authentication: SQL Login
-   - Username: `sa`
-   - Password: `YourStrong@Passw0rd`
-   - Database: `TodoDb` (after application first run)
-
-![Azure Data Studio Connection](https://learn.microsoft.com/en-us/azure-data-studio/media/quickstart-sql-server/connect-screen.png)
-
-### Connection String
-
-The application uses the following connection string:
-```
-Server=localhost,1433;Database=TodoDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
-```
-
-## Available Commands
-
-Run `make help` to see all available commands:
-
-- `make start-db` - Start SQL Server container
-- `make stop-db` - Stop and remove containers
-- `make build` - Build the application
-- `make run` - Run the application (creates and seeds DB automatically)
-- `make watch` - Run the application with hot reload
-- `make test` - Run all tests
-- `make clean` - Clean build artifacts
-- `make all` - Start DB, build and run the application
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [Docker](https://www.docker.com/products/docker-desktop) (for SQL Server)
+- Make utility
 
 ## Project Structure
 
-- `MyProject.Api/` - The API project
-  - `Controllers/` - API controllers
-  - `Models/` - Data models
-  - `Data/` - Database context and repositories
-  - `Services/` - Business logic services
+- `MyProject.Api` - .NET backend API
+- `MyProject.Client` - React frontend
+- `docker-compose.yml` - Docker configuration for SQL Server
 
-## Architecture Overview
+## Getting Started
 
-This project implements a clean architecture pattern:
-- **API Layer**: Controllers that handle HTTP requests and responses
-- **Service Layer**: Business logic and validation
-- **Repository Layer**: Data access using Entity Framework Core
-- **Entity Framework Core**: ORM for database interactions
-- **Docker Containers**: For easy deployment and development
+This project uses `make` commands to simplify development tasks. Below are the available commands:
 
-Database schema is created using Entity Framework Core's code-first approach, which automatically creates and seeds the database on application startup. 
+### Database Commands
+
+```bash
+# Start SQL Server in Docker
+make start-db
+
+# Stop SQL Server container
+make stop-db
+```
+
+### Backend Commands
+
+```bash
+# Build the backend
+make build
+
+# Run the backend
+make run
+
+# Run the backend with hot reload
+make watch
+
+# Run all backend tests
+make test
+
+# Run only backend unit tests
+make test-unit
+```
+
+### Frontend Commands
+
+```bash
+# Start frontend development server
+make frontend-dev
+
+# Build frontend for production
+make frontend-build
+
+# Run frontend tests
+make frontend-test
+
+# Run frontend linting
+make frontend-lint
+```
+
+### Combined Commands
+
+```bash
+# Start both backend and frontend for development
+make dev
+
+# Start DB, build and run the application
+make all
+```
+
+### Clean Build Artifacts
+
+```bash
+# Clean build artifacts for both backend and frontend
+make clean
+```
+
+## Development Workflow
+
+The easiest way to start development is:
+
+1. Clone the repository
+2. Run `make start-db` to start the SQL Server container
+3. Run `make dev` to start both the backend and frontend in development mode
+
+This will start:
+- SQL Server on `localhost:1433`
+- Backend API on `http://localhost:5000`
+- Frontend on `http://localhost:5173`
+
+## Database Connection
+
+To connect to the SQL Server database using Azure Data Studio or SQL Server Management Studio:
+
+- Server: `localhost,1433`
+- Authentication: SQL Login
+- Username: `sa`
+- Password: `YourStrong@Passw0rd`
+- Database: `TodoDb` (created after first run of the application)
+
+## License
+
+MIT 

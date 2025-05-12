@@ -11,21 +11,23 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>My Project Template</h1>
+        <h1>Todo App</h1>
+        <p className="app-subtitle">Simple, modern task management</p>
       </header>
       
       <main className="app-content">
-        <div className="card mb-4">
+        <TodoList />
+        
+        <div className="card my-4">
+          <p>Click counter demo:</p>
           <button onClick={() => setCount((count) => count + 1)}>
-            count is {count}
+            Clicks: {count}
           </button>
         </div>
-        
-        <TodoList />
       </main>
       
       <footer className="app-footer">
-        <p>© {new Date().getFullYear()} MyProject - MVVM Example</p>
+        <p>© {new Date().getFullYear()} Todo App - Built with React</p>
       </footer>
     </div>
   )

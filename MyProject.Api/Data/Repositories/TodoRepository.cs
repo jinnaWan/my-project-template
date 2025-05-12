@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MyProject.Api.Models;
 using System.Data.Common;
 
@@ -20,12 +21,16 @@ namespace MyProject.Api.Data.Repositories
         private const string SP_MARK_TODO_COMPLETED = "sp_MarkTodoCompleted";
         private const string SP_MARK_TODO_INCOMPLETE = "sp_MarkTodoIncomplete";
         
+        private readonly ILogger<TodoRepository> _logger;
+        
         /// <summary>
         /// Initializes a new instance of the TodoRepository class
         /// </summary>
         /// <param name="dbContext">The database context</param>
-        public TodoRepository(ApplicationDbContext dbContext) : base(dbContext)
+        /// <param name="logger">The logger</param>
+        public TodoRepository(ApplicationDbContext dbContext, ILogger<TodoRepository> logger) : base(dbContext)
         {
+            _logger = logger;
         }
 
         /// <inheritdoc />
@@ -33,12 +38,11 @@ namespace MyProject.Api.Data.Repositories
         {
             try
             {
-                // Try to use stored procedure for better performance
                 return await ExecuteStoredProcedureAsync<Todo>(SP_GET_ALL_TODOS);
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_ALL_TODOS);
                 return await _dbSet.OrderByDescending(t => t.CreatedAt).ToListAsync();
             }
         }
@@ -48,12 +52,11 @@ namespace MyProject.Api.Data.Repositories
         {
             try
             {
-                // Try to use stored procedure for better performance
                 return await ExecuteStoredProcedureFirstOrDefaultAsync<Todo>(SP_GET_TODO_BY_ID, new { Id = id });
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_TODO_BY_ID);
                 return await _dbSet.FindAsync(id);
             }
         }
@@ -61,20 +64,30 @@ namespace MyProject.Api.Data.Repositories
         /// <inheritdoc />
         public override async Task<bool> DeleteAsync(int id)
         {
+            _logger.LogInformation("Attempting to delete Todo with ID {TodoId}", id);
+            
             try
             {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureNonQueryAsync(SP_DELETE_TODO, new { Id = id }) > 0;
+                var result = await ExecuteStoredProcedureWithReturnValueAsync(SP_DELETE_TODO, new { Id = id });
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_DELETE_TODO, result);
+                
+                return result > 0;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_DELETE_TODO);
+                
                 var todo = await _dbSet.FindAsync(id);
                 if (todo == null)
+                {
+                    _logger.LogWarning("Todo with ID {TodoId} not found in the database", id);
                     return false;
-                    
+                }
+                
                 _dbSet.Remove(todo);
-                return await _dbContext.SaveChangesAsync() > 0;
+                var result = await _dbContext.SaveChangesAsync() > 0;
+                _logger.LogInformation("EF Core delete result: {Result}", result);
+                return result;
             }
         }
         
@@ -83,12 +96,11 @@ namespace MyProject.Api.Data.Repositories
         {
             try
             {
-                // Try to use stored procedure for better performance
                 return await ExecuteStoredProcedureAsync<Todo>(SP_GET_COMPLETED_TODOS);
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_COMPLETED_TODOS);
                 return await _dbSet.Where(t => t.IsCompleted).OrderByDescending(t => t.UpdatedAt).ToListAsync();
             }
         }
@@ -98,12 +110,11 @@ namespace MyProject.Api.Data.Repositories
         {
             try
             {
-                // Try to use stored procedure for better performance
                 return await ExecuteStoredProcedureAsync<Todo>(SP_GET_INCOMPLETE_TODOS);
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_INCOMPLETE_TODOS);
                 return await _dbSet.Where(t => !t.IsCompleted).OrderByDescending(t => t.CreatedAt).ToListAsync();
             }
         }
@@ -113,12 +124,15 @@ namespace MyProject.Api.Data.Repositories
         {
             try
             {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureNonQueryAsync(SP_MARK_TODO_COMPLETED, new { Id = id }) > 0;
+                var result = await ExecuteStoredProcedureWithReturnValueAsync(SP_MARK_TODO_COMPLETED, new { Id = id });
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_MARK_TODO_COMPLETED, result);
+                
+                return result > 0;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_MARK_TODO_COMPLETED);
+                
                 var todo = await _dbSet.FindAsync(id);
                 if (todo == null)
                     return false;
@@ -135,12 +149,15 @@ namespace MyProject.Api.Data.Repositories
         {
             try
             {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureNonQueryAsync(SP_MARK_TODO_INCOMPLETE, new { Id = id }) > 0;
+                var result = await ExecuteStoredProcedureWithReturnValueAsync(SP_MARK_TODO_INCOMPLETE, new { Id = id });
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_MARK_TODO_INCOMPLETE, result);
+                
+                return result > 0;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_MARK_TODO_INCOMPLETE);
+                
                 var todo = await _dbSet.FindAsync(id);
                 if (todo == null)
                     return false;
@@ -155,13 +172,11 @@ namespace MyProject.Api.Data.Repositories
         /// <inheritdoc />
         public override async Task<Todo> AddAsync(Todo todo)
         {
-            // Use the stored procedure for adding a todo
             todo.CreatedAt = DateTime.UtcNow;
             todo.UpdatedAt = DateTime.UtcNow;
             
             try
             {
-                // Using stored procedure to add
                 var id = await ExecuteStoredProcedureScalarAsync<int>(SP_CREATE_TODO, new 
                 {
                     todo.Title,
@@ -174,9 +189,10 @@ namespace MyProject.Api.Data.Repositories
                 todo.Id = id;
                 return todo;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_CREATE_TODO);
+                
                 await _dbSet.AddAsync(todo);
                 await _dbContext.SaveChangesAsync();
                 return todo;
@@ -186,82 +202,123 @@ namespace MyProject.Api.Data.Repositories
         /// <inheritdoc />
         public override async Task<bool> UpdateAsync(Todo todo)
         {
+            _logger.LogInformation("Attempting to update Todo with ID {TodoId}", todo.Id);
+            
             try
             {
-                // Use stored procedure to update the todo
-                return await ExecuteStoredProcedureNonQueryAsync(SP_UPDATE_TODO, new
+                // First check if the Todo exists
+                var existingTodo = await _dbSet.FindAsync(todo.Id);
+                if (existingTodo == null)
+                {
+                    _logger.LogWarning("Todo with ID {TodoId} not found in database before attempting update", todo.Id);
+                    return false;
+                }
+                
+                todo.UpdatedAt = DateTime.UtcNow;
+                
+                var result = await ExecuteStoredProcedureWithReturnValueAsync(SP_UPDATE_TODO, new
                 {
                     todo.Id,
                     todo.Title,
                     todo.Description,
                     todo.IsCompleted,
-                    UpdatedAt = DateTime.UtcNow
-                }) > 0;
+                    UpdatedAt = todo.UpdatedAt
+                });
+                
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_UPDATE_TODO, result);
+                
+                return result > 0;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_UPDATE_TODO);
+                
                 var existingTodo = await _dbSet.FindAsync(todo.Id);
                 if (existingTodo == null)
+                {
+                    _logger.LogWarning("Todo with ID {TodoId} not found in the database", todo.Id);
                     return false;
-                    
+                }
+                
                 existingTodo.Title = todo.Title;
                 existingTodo.Description = todo.Description;
                 existingTodo.IsCompleted = todo.IsCompleted;
                 existingTodo.UpdatedAt = DateTime.UtcNow;
                 
-                return await _dbContext.SaveChangesAsync() > 0;
+                var result = await _dbContext.SaveChangesAsync() > 0;
+                _logger.LogInformation("EF Core update result: {Result}", result);
+                return result;
             }
         }
         
         /// <inheritdoc />
         public override IEnumerable<Todo> GetAll()
         {
-            // Use stored procedure for better performance
-            return ExecuteStoredProcedure<Todo>(SP_GET_ALL_TODOS);
-            
-            // Fallback to EF Core if needed
-            // return _dbSet.OrderByDescending(t => t.CreatedAt).ToList();
+            try
+            {
+                return ExecuteStoredProcedure<Todo>(SP_GET_ALL_TODOS);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_ALL_TODOS);
+                return _dbSet.OrderByDescending(t => t.CreatedAt).ToList();
+            }
         }
         
         /// <inheritdoc />
         public override Todo? GetById(int id)
         {
-            // Use stored procedure for better performance
-            return ExecuteStoredProcedureFirstOrDefault<Todo>(SP_GET_TODO_BY_ID, new { Id = id });
-            
-            // Fallback to EF Core if needed
-            // return _dbSet.Find(id);
+            try
+            {
+                return ExecuteStoredProcedureFirstOrDefault<Todo>(SP_GET_TODO_BY_ID, new { Id = id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_TODO_BY_ID);
+                return _dbSet.Find(id);
+            }
         }
         
         /// <inheritdoc />
         public override bool Delete(int id)
         {
-            // Use stored procedure for better performance
-            return ExecuteStoredProcedureNonQuery(SP_DELETE_TODO, new { Id = id }) > 0;
+            _logger.LogInformation("Attempting to delete Todo with ID {TodoId} (synchronous method)", id);
             
-            // Fallback to EF Core if needed
-            /*
-            var todo = _dbSet.Find(id);
-            if (todo == null)
-                return false;
+            try
+            {
+                var result = ExecuteStoredProcedureWithReturnValue(SP_DELETE_TODO, new { Id = id });
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_DELETE_TODO, result);
                 
-            _dbSet.Remove(todo);
-            return _dbContext.SaveChanges() > 0;
-            */
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_DELETE_TODO);
+                
+                var todo = _dbSet.Find(id);
+                if (todo == null)
+                {
+                    _logger.LogWarning("Todo with ID {TodoId} not found in the database", id);
+                    return false;
+                }
+                
+                _dbSet.Remove(todo);
+                var result = _dbContext.SaveChanges() > 0;
+                _logger.LogInformation("EF Core delete result: {Result}", result);
+                return result;
+            }
         }
         
         /// <inheritdoc />
         public IEnumerable<Todo> GetCompleted()
         {
-            // Check if the stored procedure exists in the database
             try
             {
                 return ExecuteStoredProcedure<Todo>(SP_GET_COMPLETED_TODOS);
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_COMPLETED_TODOS);
                 return _dbSet.Where(t => t.IsCompleted).OrderByDescending(t => t.UpdatedAt).ToList();
             }
         }
@@ -269,14 +326,13 @@ namespace MyProject.Api.Data.Repositories
         /// <inheritdoc />
         public IEnumerable<Todo> GetIncomplete()
         {
-            // Check if the stored procedure exists in the database
             try
             {
                 return ExecuteStoredProcedure<Todo>(SP_GET_INCOMPLETE_TODOS);
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_GET_INCOMPLETE_TODOS);
                 return _dbSet.Where(t => !t.IsCompleted).OrderByDescending(t => t.CreatedAt).ToList();
             }
         }
@@ -284,14 +340,17 @@ namespace MyProject.Api.Data.Repositories
         /// <inheritdoc />
         public bool MarkAsCompleted(int id)
         {
-            // Check if the stored procedure exists in the database
             try
             {
-                return ExecuteStoredProcedureNonQuery(SP_MARK_TODO_COMPLETED, new { Id = id }) > 0;
+                var result = ExecuteStoredProcedureWithReturnValue(SP_MARK_TODO_COMPLETED, new { Id = id });
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_MARK_TODO_COMPLETED, result);
+                
+                return result > 0;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_MARK_TODO_COMPLETED);
+                
                 var todo = _dbSet.Find(id);
                 if (todo == null)
                     return false;
@@ -306,14 +365,17 @@ namespace MyProject.Api.Data.Repositories
         /// <inheritdoc />
         public bool MarkAsIncomplete(int id)
         {
-            // Check if the stored procedure exists in the database
             try
             {
-                return ExecuteStoredProcedureNonQuery(SP_MARK_TODO_INCOMPLETE, new { Id = id }) > 0;
+                var result = ExecuteStoredProcedureWithReturnValue(SP_MARK_TODO_INCOMPLETE, new { Id = id });
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_MARK_TODO_INCOMPLETE, result);
+                
+                return result > 0;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to EF Core if the stored procedure doesn't exist
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_MARK_TODO_INCOMPLETE);
+                
                 var todo = _dbSet.Find(id);
                 if (todo == null)
                     return false;
@@ -328,57 +390,83 @@ namespace MyProject.Api.Data.Repositories
         /// <inheritdoc />
         public override Todo Add(Todo todo)
         {
-            // Use the stored procedure for adding a todo
             todo.CreatedAt = DateTime.UtcNow;
             todo.UpdatedAt = DateTime.UtcNow;
             
-            // Using stored procedure to add
-            var id = ExecuteStoredProcedureScalar<int>(SP_CREATE_TODO, new 
+            try
             {
-                todo.Title,
-                todo.Description,
-                todo.IsCompleted,
-                todo.CreatedAt,
-                todo.UpdatedAt
-            });
-            
-            todo.Id = id;
-            return todo;
-            
-            // Fallback to EF Core if needed
-            /*
-            _dbSet.Add(todo);
-            _dbContext.SaveChanges();
-            return todo;
-            */
+                var id = ExecuteStoredProcedureScalar<int>(SP_CREATE_TODO, new 
+                {
+                    todo.Title,
+                    todo.Description,
+                    todo.IsCompleted,
+                    todo.CreatedAt,
+                    todo.UpdatedAt
+                });
+                
+                todo.Id = id;
+                return todo;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_CREATE_TODO);
+                
+                _dbSet.Add(todo);
+                _dbContext.SaveChanges();
+                return todo;
+            }
         }
         
         /// <inheritdoc />
         public override bool Update(Todo todo)
         {
-            // Use stored procedure to update the todo
-            return ExecuteStoredProcedureNonQuery(SP_UPDATE_TODO, new
+            _logger.LogInformation("Attempting to update Todo with ID {TodoId} (synchronous method)", todo.Id);
+            
+            try
             {
-                todo.Id,
-                todo.Title,
-                todo.Description,
-                todo.IsCompleted,
-                UpdatedAt = DateTime.UtcNow
-            }) > 0;
-            
-            // Fallback to EF Core if needed
-            /*
-            var existingTodo = _dbSet.Find(todo.Id);
-            if (existingTodo == null)
-                return false;
+                // First check if the Todo exists
+                var existingTodo = _dbSet.Find(todo.Id);
+                if (existingTodo == null)
+                {
+                    _logger.LogWarning("Todo with ID {TodoId} not found in database before attempting update", todo.Id);
+                    return false;
+                }
                 
-            existingTodo.Title = todo.Title;
-            existingTodo.Description = todo.Description;
-            existingTodo.IsCompleted = todo.IsCompleted;
-            existingTodo.UpdatedAt = DateTime.UtcNow;
-            
-            return _dbContext.SaveChanges() > 0;
-            */
+                todo.UpdatedAt = DateTime.UtcNow;
+                
+                var result = ExecuteStoredProcedureWithReturnValue(SP_UPDATE_TODO, new
+                {
+                    todo.Id,
+                    todo.Title,
+                    todo.Description,
+                    todo.IsCompleted,
+                    UpdatedAt = todo.UpdatedAt
+                });
+                
+                _logger.LogInformation("StoredProcedure {ProcName} returned status code {Result}", SP_UPDATE_TODO, result);
+                
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to execute stored procedure {StoredProcedure}. Falling back to EF Core.", SP_UPDATE_TODO);
+                
+                var existingTodo = _dbSet.Find(todo.Id);
+                if (existingTodo == null)
+                {
+                    _logger.LogWarning("Todo with ID {TodoId} not found in the database", todo.Id);
+                    return false;
+                }
+                
+                existingTodo.Title = todo.Title;
+                existingTodo.Description = todo.Description;
+                existingTodo.IsCompleted = todo.IsCompleted;
+                existingTodo.UpdatedAt = DateTime.UtcNow;
+                
+                var result = _dbContext.SaveChanges() > 0;
+                _logger.LogInformation("EF Core update result: {Result}", result);
+                return result;
+            }
         }
     }
 } 
