@@ -86,7 +86,7 @@ describe('TodoList', () => {
   it('updates newTodoTitle when input changes', () => {
     render(<TodoList />);
     
-    const input = screen.getByPlaceholderText('Add new todo');
+    const input = screen.getByPlaceholderText('What needs to be done?');
     fireEvent.change(input, { target: { value: 'New Todo Item' } });
     
     expect(mockSetNewTodoTitle).toHaveBeenCalledWith('New Todo Item');

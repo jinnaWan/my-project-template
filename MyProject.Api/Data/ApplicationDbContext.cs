@@ -30,7 +30,7 @@ namespace MyProject.Api.Data
             
             modelBuilder.Entity<User>(entity =>
             {
-                entity.ToTable("User");
+                entity.ToTable("AppUser");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
@@ -56,6 +56,15 @@ namespace MyProject.Api.Data
         /// </summary>
         public void EnsureDatabaseCreated()
         {
+            Database.EnsureCreated();
+        }
+
+        /// <summary>
+        /// Forces database recreation (deletes and recreates)
+        /// </summary>
+        public void RecreateDatabase()
+        {
+            Database.EnsureDeleted();
             Database.EnsureCreated();
         }
 

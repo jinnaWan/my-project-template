@@ -147,5 +147,79 @@ namespace MyProject.Api.Data.Repositories
             await connection.OpenAsync();
             return await connection.ExecuteAsync(storedProcedure, parameters, commandType: CommandType.StoredProcedure);
         }
+
+        /// <summary>
+        /// Executes a stored procedure that returns a status code
+        /// </summary>
+        /// <param name="storedProcedure">The name of the stored procedure</param>
+        /// <param name="parameters">The parameters to pass to the stored procedure</param>
+        /// <returns>The stored procedure return value (status code)</returns>
+        protected int ExecuteStoredProcedureWithReturnValue(string storedProcedure, object? parameters = null)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            
+            var command = new SqlCommand(storedProcedure, connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            
+            // Add parameters if any
+            if (parameters != null)
+            {
+                var parameterProperties = parameters.GetType().GetProperties();
+                foreach (var prop in parameterProperties)
+                {
+                    var value = prop.GetValue(parameters);
+                    command.Parameters.AddWithValue($"@{prop.Name}", value ?? DBNull.Value);
+                }
+            }
+            
+            // Add return value parameter
+            var returnParam = command.Parameters.Add("@ReturnVal", SqlDbType.Int);
+            returnParam.Direction = ParameterDirection.ReturnValue;
+            
+            connection.Open();
+            command.ExecuteNonQuery();
+            connection.Close();
+            
+            return (int)returnParam.Value;
+        }
+
+        /// <summary>
+        /// Executes a stored procedure that returns a status code asynchronously
+        /// </summary>
+        /// <param name="storedProcedure">The name of the stored procedure</param>
+        /// <param name="parameters">The parameters to pass to the stored procedure</param>
+        /// <returns>The stored procedure return value (status code)</returns>
+        protected async Task<int> ExecuteStoredProcedureWithReturnValueAsync(string storedProcedure, object? parameters = null)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            
+            var command = new SqlCommand(storedProcedure, connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            
+            // Add parameters if any
+            if (parameters != null)
+            {
+                var parameterProperties = parameters.GetType().GetProperties();
+                foreach (var prop in parameterProperties)
+                {
+                    var value = prop.GetValue(parameters);
+                    command.Parameters.AddWithValue($"@{prop.Name}", value ?? DBNull.Value);
+                }
+            }
+            
+            // Add return value parameter
+            var returnParam = command.Parameters.Add("@ReturnVal", SqlDbType.Int);
+            returnParam.Direction = ParameterDirection.ReturnValue;
+            
+            await connection.OpenAsync();
+            await command.ExecuteNonQueryAsync();
+            await connection.CloseAsync();
+            
+            return (int)returnParam.Value;
+        }
     }
 } 
