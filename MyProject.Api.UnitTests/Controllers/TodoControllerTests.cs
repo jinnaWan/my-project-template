@@ -4,6 +4,7 @@ using Moq;
 using MyProject.Api.Controllers;
 using MyProject.Api.Models;
 using MyProject.Api.Services;
+using MyProject.Api.UnitTests.TestUtils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,18 +13,24 @@ using Xunit;
 
 namespace MyProject.Api.UnitTests.Controllers
 {
-    public class TodoControllerTests
+    public class TodoControllerTests : IDisposable
     {
-        private readonly Mock<ITodoService> _mockTodoService;
-        private readonly Mock<ILogger<TodoController>> _mockLogger;
-        private readonly TodoController _controller;
+        private readonly ServiceTestFixture<TodoController> _fixture;
 
         public TodoControllerTests()
         {
-            _mockTodoService = new Mock<ITodoService>();
-            _mockLogger = new Mock<ILogger<TodoController>>();
-            _controller = new TodoController(_mockTodoService.Object, _mockLogger.Object);
+            _fixture = new ServiceTestFixture<TodoController>();
         }
+
+        public void Dispose()
+        {
+            _fixture.Dispose();
+        }
+
+        // Helper properties for better readability
+        private Mock<ITodoService> TodoService => _fixture.GetMock<ITodoService>();
+        private Mock<ILogger<TodoController>> Logger => _fixture.GetMock<ILogger<TodoController>>();
+        private TodoController Controller => _fixture.Service;
 
         [Fact]
         public async Task GetAllAsync_ReturnsOkResult_WithTodoList()
@@ -34,11 +41,11 @@ namespace MyProject.Api.UnitTests.Controllers
                 new Todo { Id = 1, Title = "Test Todo 1", IsCompleted = false },
                 new Todo { Id = 2, Title = "Test Todo 2", IsCompleted = true }
             };
-            _mockTodoService.Setup(service => service.GetAllTodosAsync())
+            TodoService.Setup(service => service.GetAllTodosAsync())
                 .ReturnsAsync(expectedTodos);
 
             // Act
-            var result = await _controller.GetAllAsync();
+            var result = await Controller.GetAllAsync();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -50,11 +57,11 @@ namespace MyProject.Api.UnitTests.Controllers
         public async Task GetAllAsync_HandlesException_ReturnsServerError()
         {
             // Arrange
-            _mockTodoService.Setup(service => service.GetAllTodosAsync())
+            TodoService.Setup(service => service.GetAllTodosAsync())
                 .ThrowsAsync(new Exception("Test exception"));
 
             // Act
-            var result = await _controller.GetAllAsync();
+            var result = await Controller.GetAllAsync();
 
             // Assert
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
@@ -67,11 +74,11 @@ namespace MyProject.Api.UnitTests.Controllers
         {
             // Arrange
             var expectedTodo = new Todo { Id = 1, Title = "Test Todo", IsCompleted = false };
-            _mockTodoService.Setup(service => service.GetTodoByIdAsync(1))
+            TodoService.Setup(service => service.GetTodoByIdAsync(1))
                 .ReturnsAsync(expectedTodo);
 
             // Act
-            var result = await _controller.GetByIdAsync(1);
+            var result = await Controller.GetByIdAsync(1);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -84,11 +91,11 @@ namespace MyProject.Api.UnitTests.Controllers
         public async Task GetByIdAsync_WithInvalidId_ReturnsNotFound()
         {
             // Arrange
-            _mockTodoService.Setup(service => service.GetTodoByIdAsync(999))
+            TodoService.Setup(service => service.GetTodoByIdAsync(999))
                 .ReturnsAsync((Todo)null);
 
             // Act
-            var result = await _controller.GetByIdAsync(999);
+            var result = await Controller.GetByIdAsync(999);
 
             // Assert
             Assert.IsType<NotFoundResult>(result.Result);
@@ -98,11 +105,11 @@ namespace MyProject.Api.UnitTests.Controllers
         public async Task GetByIdAsync_HandlesException_ReturnsServerError()
         {
             // Arrange
-            _mockTodoService.Setup(service => service.GetTodoByIdAsync(1))
+            TodoService.Setup(service => service.GetTodoByIdAsync(1))
                 .ThrowsAsync(new Exception("Test exception"));
 
             // Act
-            var result = await _controller.GetByIdAsync(1);
+            var result = await Controller.GetByIdAsync(1);
 
             // Assert
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
@@ -117,11 +124,11 @@ namespace MyProject.Api.UnitTests.Controllers
             var todoToCreate = new Todo { Title = "New Todo", IsCompleted = false };
             var createdTodo = new Todo { Id = 1, Title = "New Todo", IsCompleted = false };
             
-            _mockTodoService.Setup(service => service.CreateTodoAsync(It.IsAny<Todo>()))
+            TodoService.Setup(service => service.CreateTodoAsync(It.IsAny<Todo>()))
                 .ReturnsAsync(createdTodo);
 
             // Act
-            var result = await _controller.CreateAsync(todoToCreate);
+            var result = await Controller.CreateAsync(todoToCreate);
 
             // Assert
             var createdAtRouteResult = Assert.IsType<CreatedAtRouteResult>(result.Result);
@@ -138,11 +145,11 @@ namespace MyProject.Api.UnitTests.Controllers
             // Arrange
             var todoToCreate = new Todo { Title = "", IsCompleted = false };
             
-            _mockTodoService.Setup(service => service.CreateTodoAsync(It.IsAny<Todo>()))
+            TodoService.Setup(service => service.CreateTodoAsync(It.IsAny<Todo>()))
                 .ThrowsAsync(new ArgumentException("Title cannot be empty"));
 
             // Act
-            var result = await _controller.CreateAsync(todoToCreate);
+            var result = await Controller.CreateAsync(todoToCreate);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
@@ -155,11 +162,11 @@ namespace MyProject.Api.UnitTests.Controllers
             // Arrange
             var todoToCreate = new Todo { Title = "Test Todo", IsCompleted = false };
             
-            _mockTodoService.Setup(service => service.CreateTodoAsync(It.IsAny<Todo>()))
+            TodoService.Setup(service => service.CreateTodoAsync(It.IsAny<Todo>()))
                 .ThrowsAsync(new Exception("Test exception"));
 
             // Act
-            var result = await _controller.CreateAsync(todoToCreate);
+            var result = await Controller.CreateAsync(todoToCreate);
 
             // Assert
             var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
@@ -173,11 +180,11 @@ namespace MyProject.Api.UnitTests.Controllers
             // Arrange
             var todoToUpdate = new Todo { Id = 1, Title = "Updated Todo", IsCompleted = true };
             
-            _mockTodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
+            TodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
                 .ReturnsAsync(true);
 
             // Act
-            var result = await _controller.UpdateAsync(1, todoToUpdate);
+            var result = await Controller.UpdateAsync(1, todoToUpdate);
 
             // Assert
             Assert.IsType<NoContentResult>(result);
@@ -190,7 +197,7 @@ namespace MyProject.Api.UnitTests.Controllers
             var todoToUpdate = new Todo { Id = 2, Title = "Updated Todo", IsCompleted = true };
             
             // Act
-            var result = await _controller.UpdateAsync(1, todoToUpdate);
+            var result = await Controller.UpdateAsync(1, todoToUpdate);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result);
@@ -202,11 +209,11 @@ namespace MyProject.Api.UnitTests.Controllers
             // Arrange
             var todoToUpdate = new Todo { Id = 999, Title = "Updated Todo", IsCompleted = true };
             
-            _mockTodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
+            TodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
                 .ReturnsAsync(false);
 
             // Act
-            var result = await _controller.UpdateAsync(999, todoToUpdate);
+            var result = await Controller.UpdateAsync(999, todoToUpdate);
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
@@ -218,11 +225,11 @@ namespace MyProject.Api.UnitTests.Controllers
             // Arrange
             var todoToUpdate = new Todo { Id = 1, Title = "", IsCompleted = true };
             
-            _mockTodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
+            TodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
                 .ThrowsAsync(new ArgumentException("Title cannot be empty"));
 
             // Act
-            var result = await _controller.UpdateAsync(1, todoToUpdate);
+            var result = await Controller.UpdateAsync(1, todoToUpdate);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -235,11 +242,11 @@ namespace MyProject.Api.UnitTests.Controllers
             // Arrange
             var todoToUpdate = new Todo { Id = 1, Title = "Updated Todo", IsCompleted = true };
             
-            _mockTodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
+            TodoService.Setup(service => service.UpdateTodoAsync(It.IsAny<Todo>()))
                 .ThrowsAsync(new Exception("Test exception"));
 
             // Act
-            var result = await _controller.UpdateAsync(1, todoToUpdate);
+            var result = await Controller.UpdateAsync(1, todoToUpdate);
 
             // Assert
             var statusCodeResult = Assert.IsType<ObjectResult>(result);
@@ -251,11 +258,11 @@ namespace MyProject.Api.UnitTests.Controllers
         public async Task DeleteAsync_WithValidId_ReturnsNoContent()
         {
             // Arrange
-            _mockTodoService.Setup(service => service.DeleteTodoAsync(1))
+            TodoService.Setup(service => service.DeleteTodoAsync(1))
                 .ReturnsAsync(true);
 
             // Act
-            var result = await _controller.DeleteAsync(1);
+            var result = await Controller.DeleteAsync(1);
 
             // Assert
             Assert.IsType<NoContentResult>(result);
@@ -265,11 +272,11 @@ namespace MyProject.Api.UnitTests.Controllers
         public async Task DeleteAsync_WithInvalidId_ReturnsNotFound()
         {
             // Arrange
-            _mockTodoService.Setup(service => service.DeleteTodoAsync(999))
+            TodoService.Setup(service => service.DeleteTodoAsync(999))
                 .ReturnsAsync(false);
 
             // Act
-            var result = await _controller.DeleteAsync(999);
+            var result = await Controller.DeleteAsync(999);
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
@@ -279,11 +286,11 @@ namespace MyProject.Api.UnitTests.Controllers
         public async Task DeleteAsync_HandlesException_ReturnsServerError()
         {
             // Arrange
-            _mockTodoService.Setup(service => service.DeleteTodoAsync(1))
+            TodoService.Setup(service => service.DeleteTodoAsync(1))
                 .ThrowsAsync(new Exception("Test exception"));
 
             // Act
-            var result = await _controller.DeleteAsync(1);
+            var result = await Controller.DeleteAsync(1);
 
             // Assert
             var statusCodeResult = Assert.IsType<ObjectResult>(result);
