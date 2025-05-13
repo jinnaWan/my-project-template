@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Moq;
 using MyProject.Api.Data.Repositories;
 using MyProject.Api.Models;
@@ -9,18 +10,23 @@ using Xunit;
 
 namespace MyProject.Api.UnitTests.Services
 {
-    public class TodoServiceTests
+    public class TodoServiceTests : IDisposable
     {
         private readonly Mock<ITodoRepository> _mockRepository;
+        private readonly Mock<ILogger<TodoService>> _mockLogger;
         private readonly TodoService _service;
 
         public TodoServiceTests()
         {
             _mockRepository = new Mock<ITodoRepository>();
-            _service = new TodoService(_mockRepository.Object);
+            _mockLogger = new Mock<ILogger<TodoService>>();
+            _service = new TodoService(_mockRepository.Object, _mockLogger.Object);
         }
 
-        // Async Tests
+        public void Dispose()
+        {
+            // Clean up if needed
+        }
 
         [Fact]
         public async Task GetAllTodosAsync_ShouldReturnAllTodos()
@@ -221,205 +227,63 @@ namespace MyProject.Api.UnitTests.Services
             _mockRepository.Verify(repo => repo.MarkAsIncompleteAsync(1), Times.Once);
         }
 
-        // Synchronous Tests
-
         [Fact]
-        public void GetAllTodos_ShouldReturnAllTodos()
+        public async Task GetAllTodosAsync_HandlesException_LogsError()
         {
             // Arrange
-            var expectedTodos = new List<Todo>
-            {
-                new Todo { Id = 1, Title = "Test Todo 1", IsCompleted = false },
-                new Todo { Id = 2, Title = "Test Todo 2", IsCompleted = true }
-            };
-            _mockRepository.Setup(repo => repo.GetAll())
-                .Returns(expectedTodos);
+            _mockRepository.Setup(repo => repo.GetAllAsync())
+                .ThrowsAsync(new Exception("Test exception"));
 
-            // Act
-            var result = _service.GetAllTodos();
-
-            // Assert
-            Assert.Equal(2, result.Count());
-            _mockRepository.Verify(repo => repo.GetAll(), Times.Once);
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _service.GetAllTodosAsync());
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Error getting all todos")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                Times.Once);
         }
-
+        
         [Fact]
-        public void GetTodoById_WithValidId_ShouldReturnTodo()
+        public async Task GetTodoByIdAsync_HandlesException_LogsError()
         {
             // Arrange
-            var expectedTodo = new Todo { Id = 1, Title = "Test Todo", IsCompleted = false };
-            _mockRepository.Setup(repo => repo.GetById(1))
-                .Returns(expectedTodo);
+            _mockRepository.Setup(repo => repo.GetByIdAsync(1))
+                .ThrowsAsync(new Exception("Test exception"));
 
-            // Act
-            var result = _service.GetTodoById(1);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(1, result.Id);
-            Assert.Equal("Test Todo", result.Title);
-            _mockRepository.Verify(repo => repo.GetById(1), Times.Once);
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _service.GetTodoByIdAsync(1));
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Error getting todo with ID 1")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                Times.Once);
         }
-
+        
         [Fact]
-        public void CreateTodo_WithValidTodo_ShouldReturnCreatedTodo()
+        public async Task CreateTodoAsync_HandlesException_LogsError()
         {
             // Arrange
             var todoToCreate = new Todo { Title = "New Todo", IsCompleted = false };
-            var expectedTodo = new Todo { Id = 1, Title = "New Todo", IsCompleted = false };
             
-            _mockRepository.Setup(repo => repo.Add(It.IsAny<Todo>()))
-                .Returns(expectedTodo);
-
-            // Act
-            var result = _service.CreateTodo(todoToCreate);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(1, result.Id);
-            Assert.Equal("New Todo", result.Title);
-            _mockRepository.Verify(repo => repo.Add(It.IsAny<Todo>()), Times.Once);
-        }
-
-        [Fact]
-        public void CreateTodo_WithEmptyTitle_ShouldThrowArgumentException()
-        {
-            // Arrange
-            var todoToCreate = new Todo { Title = "", IsCompleted = false };
+            _mockRepository.Setup(repo => repo.AddAsync(It.IsAny<Todo>()))
+                .ThrowsAsync(new Exception("Test exception"));
 
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => _service.CreateTodo(todoToCreate));
-            Assert.Contains("title cannot be empty", exception.Message.ToLower());
-        }
-
-        [Fact]
-        public void UpdateTodo_WithValidTodo_ShouldReturnTrue()
-        {
-            // Arrange
-            var todoToUpdate = new Todo { Id = 1, Title = "Updated Todo", IsCompleted = true };
-            
-            _mockRepository.Setup(repo => repo.Update(It.IsAny<Todo>()))
-                .Returns(true);
-
-            // Act
-            var result = _service.UpdateTodo(todoToUpdate);
-
-            // Assert
-            Assert.True(result);
-            _mockRepository.Verify(repo => repo.Update(It.IsAny<Todo>()), Times.Once);
-        }
-
-        [Fact]
-        public void UpdateTodo_WithEmptyTitle_ShouldThrowArgumentException()
-        {
-            // Arrange
-            var todoToUpdate = new Todo { Id = 1, Title = "", IsCompleted = true };
-
-            // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => _service.UpdateTodo(todoToUpdate));
-            Assert.Contains("title cannot be empty", exception.Message.ToLower());
-        }
-
-        [Fact]
-        public void DeleteTodo_WithValidId_ShouldReturnTrue()
-        {
-            // Arrange
-            _mockRepository.Setup(repo => repo.Delete(1))
-                .Returns(true);
-
-            // Act
-            var result = _service.DeleteTodo(1);
-
-            // Assert
-            Assert.True(result);
-            _mockRepository.Verify(repo => repo.Delete(1), Times.Once);
-        }
-
-        [Fact]
-        public void DeleteTodo_WithInvalidId_ShouldReturnFalse()
-        {
-            // Arrange
-            _mockRepository.Setup(repo => repo.Delete(999))
-                .Returns(false);
-
-            // Act
-            var result = _service.DeleteTodo(999);
-
-            // Assert
-            Assert.False(result);
-            _mockRepository.Verify(repo => repo.Delete(999), Times.Once);
-        }
-        
-        [Fact]
-        public void GetCompletedTodos_ShouldReturnCompletedTodos()
-        {
-            // Arrange
-            var expectedTodos = new List<Todo>
-            {
-                new Todo { Id = 1, Title = "Test Todo 1", IsCompleted = true },
-                new Todo { Id = 2, Title = "Test Todo 2", IsCompleted = true }
-            };
-            _mockRepository.Setup(repo => repo.GetCompleted())
-                .Returns(expectedTodos);
-
-            // Act
-            var result = _service.GetCompletedTodos();
-
-            // Assert
-            Assert.Equal(2, result.Count());
-            Assert.All(result, todo => Assert.True(todo.IsCompleted));
-            _mockRepository.Verify(repo => repo.GetCompleted(), Times.Once);
-        }
-        
-        [Fact]
-        public void GetIncompleteTodos_ShouldReturnIncompleteTodos()
-        {
-            // Arrange
-            var expectedTodos = new List<Todo>
-            {
-                new Todo { Id = 1, Title = "Test Todo 1", IsCompleted = false },
-                new Todo { Id = 2, Title = "Test Todo 2", IsCompleted = false }
-            };
-            _mockRepository.Setup(repo => repo.GetIncomplete())
-                .Returns(expectedTodos);
-
-            // Act
-            var result = _service.GetIncompleteTodos();
-
-            // Assert
-            Assert.Equal(2, result.Count());
-            Assert.All(result, todo => Assert.False(todo.IsCompleted));
-            _mockRepository.Verify(repo => repo.GetIncomplete(), Times.Once);
-        }
-        
-        [Fact]
-        public void MarkAsCompleted_ShouldReturnTrue()
-        {
-            // Arrange
-            _mockRepository.Setup(repo => repo.MarkAsCompleted(1))
-                .Returns(true);
-
-            // Act
-            var result = _service.MarkAsCompleted(1);
-
-            // Assert
-            Assert.True(result);
-            _mockRepository.Verify(repo => repo.MarkAsCompleted(1), Times.Once);
-        }
-        
-        [Fact]
-        public void MarkAsIncomplete_ShouldReturnTrue()
-        {
-            // Arrange
-            _mockRepository.Setup(repo => repo.MarkAsIncomplete(1))
-                .Returns(true);
-
-            // Act
-            var result = _service.MarkAsIncomplete(1);
-
-            // Assert
-            Assert.True(result);
-            _mockRepository.Verify(repo => repo.MarkAsIncomplete(1), Times.Once);
+            await Assert.ThrowsAsync<Exception>(() => _service.CreateTodoAsync(todoToCreate));
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString().Contains("Error creating todo with title")),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                Times.Once);
         }
     }
 } 

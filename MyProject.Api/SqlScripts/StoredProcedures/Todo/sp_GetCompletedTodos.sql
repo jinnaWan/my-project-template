@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE sp_GetAllTodos
+CREATE OR ALTER PROCEDURE sp_GetCompletedTodos
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -11,6 +11,6 @@ BEGIN
         CreatedAt,
         UpdatedAt
     FROM Todo
-    ORDER BY CreatedAt DESC;
-END
-GO 
+    WHERE IsCompleted = 1
+    ORDER BY UpdatedAt DESC;
+END 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MyProject.Api.Models;
 using System.Data.Common;
 
@@ -24,361 +25,184 @@ namespace MyProject.Api.Data.Repositories
         /// Initializes a new instance of the TodoRepository class
         /// </summary>
         /// <param name="dbContext">The database context</param>
-        public TodoRepository(ApplicationDbContext dbContext) : base(dbContext)
+        /// <param name="logger">The logger</param>
+        public TodoRepository(ApplicationDbContext dbContext, ILogger<TodoRepository> logger) : base(dbContext, logger)
         {
         }
 
         /// <inheritdoc />
         public override async Task<IEnumerable<Todo>> GetAllAsync()
         {
-            try
-            {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureAsync<Todo>(SP_GET_ALL_TODOS);
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                return await _dbSet.OrderByDescending(t => t.CreatedAt).ToListAsync();
-            }
+            return await ExecuteWithLoggingAsync<IEnumerable<Todo>>(
+                SP_GET_ALL_TODOS,
+                null,
+                ExecuteStoredProcedureAsync<Todo>,
+                async (ex) => await _dbSet.OrderByDescending(t => t.CreatedAt).ToListAsync()
+            );
         }
         
         /// <inheritdoc />
         public override async Task<Todo?> GetByIdAsync(int id)
         {
-            try
-            {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureFirstOrDefaultAsync<Todo>(SP_GET_TODO_BY_ID, new { Id = id });
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                return await _dbSet.FindAsync(id);
-            }
+            return await ExecuteWithLoggingAsync<Todo?>(
+                SP_GET_TODO_BY_ID,
+                new { Id = id },
+                ExecuteStoredProcedureFirstOrDefaultAsync<Todo>,
+                async (ex) => await _dbSet.FindAsync(id)
+            );
         }
         
         /// <inheritdoc />
         public override async Task<bool> DeleteAsync(int id)
         {
-            try
-            {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureNonQueryAsync(SP_DELETE_TODO, new { Id = id }) > 0;
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                var todo = await _dbSet.FindAsync(id);
-                if (todo == null)
-                    return false;
+            _logger.LogInformation("Attempting to delete Todo with ID {TodoId}", id);
+            
+            return await ExecuteWithLoggingAsync<bool>(
+                SP_DELETE_TODO,
+                new { Id = id },
+                async (sp, p) => await ExecuteStoredProcedureWithReturnValueAsync(sp, p) > 0,
+                async (ex) => {
+                    var todo = await _dbSet.FindAsync(id);
+                    if (todo == null)
+                    {
+                        _logger.LogWarning("Todo with ID {TodoId} not found in the database", id);
+                        return false;
+                    }
                     
-                _dbSet.Remove(todo);
-                return await _dbContext.SaveChangesAsync() > 0;
-            }
+                    _dbSet.Remove(todo);
+                    var result = await _dbContext.SaveChangesAsync() > 0;
+                    _logger.LogInformation("EF Core delete result: {Result}", result);
+                    return result;
+                }
+            );
         }
         
         /// <inheritdoc />
         public async Task<IEnumerable<Todo>> GetCompletedAsync()
         {
-            try
-            {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureAsync<Todo>(SP_GET_COMPLETED_TODOS);
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                return await _dbSet.Where(t => t.IsCompleted).OrderByDescending(t => t.UpdatedAt).ToListAsync();
-            }
+            return await ExecuteWithLoggingAsync<IEnumerable<Todo>>(
+                SP_GET_COMPLETED_TODOS,
+                null,
+                ExecuteStoredProcedureAsync<Todo>,
+                async (ex) => await _dbSet.Where(t => t.IsCompleted).OrderByDescending(t => t.UpdatedAt).ToListAsync()
+            );
         }
         
         /// <inheritdoc />
         public async Task<IEnumerable<Todo>> GetIncompleteAsync()
         {
-            try
-            {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureAsync<Todo>(SP_GET_INCOMPLETE_TODOS);
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                return await _dbSet.Where(t => !t.IsCompleted).OrderByDescending(t => t.CreatedAt).ToListAsync();
-            }
+            return await ExecuteWithLoggingAsync<IEnumerable<Todo>>(
+                SP_GET_INCOMPLETE_TODOS,
+                null,
+                ExecuteStoredProcedureAsync<Todo>,
+                async (ex) => await _dbSet.Where(t => !t.IsCompleted).OrderByDescending(t => t.CreatedAt).ToListAsync()
+            );
         }
         
         /// <inheritdoc />
         public async Task<bool> MarkAsCompletedAsync(int id)
         {
-            try
-            {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureNonQueryAsync(SP_MARK_TODO_COMPLETED, new { Id = id }) > 0;
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                var todo = await _dbSet.FindAsync(id);
-                if (todo == null)
-                    return false;
+            return await ExecuteWithLoggingAsync<bool>(
+                SP_MARK_TODO_COMPLETED,
+                new { Id = id },
+                async (sp, p) => await ExecuteStoredProcedureWithReturnValueAsync(sp, p) > 0,
+                async (ex) => {
+                    var todo = await _dbSet.FindAsync(id);
+                    if (todo == null)
+                        return false;
+                        
+                    todo.IsCompleted = true;
+                    todo.UpdatedAt = DateTime.UtcNow;
                     
-                todo.IsCompleted = true;
-                todo.UpdatedAt = DateTime.UtcNow;
-                
-                return await _dbContext.SaveChangesAsync() > 0;
-            }
+                    return await _dbContext.SaveChangesAsync() > 0;
+                }
+            );
         }
         
         /// <inheritdoc />
         public async Task<bool> MarkAsIncompleteAsync(int id)
         {
-            try
-            {
-                // Try to use stored procedure for better performance
-                return await ExecuteStoredProcedureNonQueryAsync(SP_MARK_TODO_INCOMPLETE, new { Id = id }) > 0;
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                var todo = await _dbSet.FindAsync(id);
-                if (todo == null)
-                    return false;
+            return await ExecuteWithLoggingAsync<bool>(
+                SP_MARK_TODO_INCOMPLETE,
+                new { Id = id },
+                async (sp, p) => await ExecuteStoredProcedureWithReturnValueAsync(sp, p) > 0,
+                async (ex) => {
+                    var todo = await _dbSet.FindAsync(id);
+                    if (todo == null)
+                        return false;
+                        
+                    todo.IsCompleted = false;
+                    todo.UpdatedAt = DateTime.UtcNow;
                     
-                todo.IsCompleted = false;
-                todo.UpdatedAt = DateTime.UtcNow;
-                
-                return await _dbContext.SaveChangesAsync() > 0;
-            }
+                    return await _dbContext.SaveChangesAsync() > 0;
+                }
+            );
         }
         
         /// <inheritdoc />
         public override async Task<Todo> AddAsync(Todo todo)
         {
-            // Use the stored procedure for adding a todo
             todo.CreatedAt = DateTime.UtcNow;
             todo.UpdatedAt = DateTime.UtcNow;
             
-            try
-            {
-                // Using stored procedure to add
-                var id = await ExecuteStoredProcedureScalarAsync<int>(SP_CREATE_TODO, new 
-                {
+            return await ExecuteWithLoggingAsync<Todo>(
+                SP_CREATE_TODO,
+                new {
                     todo.Title,
                     todo.Description,
                     todo.IsCompleted,
                     todo.CreatedAt,
                     todo.UpdatedAt
-                });
-                
-                todo.Id = id;
-                return todo;
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                await _dbSet.AddAsync(todo);
-                await _dbContext.SaveChangesAsync();
-                return todo;
-            }
+                },
+                async (sp, p) => {
+                    var id = await ExecuteStoredProcedureScalarAsync<int>(sp, p);
+                    todo.Id = id;
+                    return todo;
+                },
+                async (ex) => {
+                    await _dbSet.AddAsync(todo);
+                    await _dbContext.SaveChangesAsync();
+                    return todo;
+                }
+            );
         }
         
         /// <inheritdoc />
         public override async Task<bool> UpdateAsync(Todo todo)
         {
-            try
+            _logger.LogInformation("Attempting to update Todo with ID {TodoId}", todo.Id);
+            
+            // First check if the Todo exists
+            var existingTodo = await _dbSet.FindAsync(todo.Id);
+            if (existingTodo == null)
             {
-                // Use stored procedure to update the todo
-                return await ExecuteStoredProcedureNonQueryAsync(SP_UPDATE_TODO, new
-                {
+                _logger.LogWarning("Todo with ID {TodoId} not found in database before attempting update", todo.Id);
+                return false;
+            }
+            
+            todo.UpdatedAt = DateTime.UtcNow;
+            
+            return await ExecuteWithLoggingAsync<bool>(
+                SP_UPDATE_TODO,
+                new {
                     todo.Id,
                     todo.Title,
                     todo.Description,
                     todo.IsCompleted,
-                    UpdatedAt = DateTime.UtcNow
-                }) > 0;
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                var existingTodo = await _dbSet.FindAsync(todo.Id);
-                if (existingTodo == null)
-                    return false;
+                    UpdatedAt = todo.UpdatedAt
+                },
+                async (sp, p) => await ExecuteStoredProcedureWithReturnValueAsync(sp, p) > 0,
+                async (ex) => {
+                    existingTodo.Title = todo.Title;
+                    existingTodo.Description = todo.Description;
+                    existingTodo.IsCompleted = todo.IsCompleted;
+                    existingTodo.UpdatedAt = DateTime.UtcNow;
                     
-                existingTodo.Title = todo.Title;
-                existingTodo.Description = todo.Description;
-                existingTodo.IsCompleted = todo.IsCompleted;
-                existingTodo.UpdatedAt = DateTime.UtcNow;
-                
-                return await _dbContext.SaveChangesAsync() > 0;
-            }
-        }
-        
-        /// <inheritdoc />
-        public override IEnumerable<Todo> GetAll()
-        {
-            // Use stored procedure for better performance
-            return ExecuteStoredProcedure<Todo>(SP_GET_ALL_TODOS);
-            
-            // Fallback to EF Core if needed
-            // return _dbSet.OrderByDescending(t => t.CreatedAt).ToList();
-        }
-        
-        /// <inheritdoc />
-        public override Todo? GetById(int id)
-        {
-            // Use stored procedure for better performance
-            return ExecuteStoredProcedureFirstOrDefault<Todo>(SP_GET_TODO_BY_ID, new { Id = id });
-            
-            // Fallback to EF Core if needed
-            // return _dbSet.Find(id);
-        }
-        
-        /// <inheritdoc />
-        public override bool Delete(int id)
-        {
-            // Use stored procedure for better performance
-            return ExecuteStoredProcedureNonQuery(SP_DELETE_TODO, new { Id = id }) > 0;
-            
-            // Fallback to EF Core if needed
-            /*
-            var todo = _dbSet.Find(id);
-            if (todo == null)
-                return false;
-                
-            _dbSet.Remove(todo);
-            return _dbContext.SaveChanges() > 0;
-            */
-        }
-        
-        /// <inheritdoc />
-        public IEnumerable<Todo> GetCompleted()
-        {
-            // Check if the stored procedure exists in the database
-            try
-            {
-                return ExecuteStoredProcedure<Todo>(SP_GET_COMPLETED_TODOS);
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                return _dbSet.Where(t => t.IsCompleted).OrderByDescending(t => t.UpdatedAt).ToList();
-            }
-        }
-        
-        /// <inheritdoc />
-        public IEnumerable<Todo> GetIncomplete()
-        {
-            // Check if the stored procedure exists in the database
-            try
-            {
-                return ExecuteStoredProcedure<Todo>(SP_GET_INCOMPLETE_TODOS);
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                return _dbSet.Where(t => !t.IsCompleted).OrderByDescending(t => t.CreatedAt).ToList();
-            }
-        }
-        
-        /// <inheritdoc />
-        public bool MarkAsCompleted(int id)
-        {
-            // Check if the stored procedure exists in the database
-            try
-            {
-                return ExecuteStoredProcedureNonQuery(SP_MARK_TODO_COMPLETED, new { Id = id }) > 0;
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                var todo = _dbSet.Find(id);
-                if (todo == null)
-                    return false;
-                    
-                todo.IsCompleted = true;
-                todo.UpdatedAt = DateTime.UtcNow;
-                
-                return _dbContext.SaveChanges() > 0;
-            }
-        }
-        
-        /// <inheritdoc />
-        public bool MarkAsIncomplete(int id)
-        {
-            // Check if the stored procedure exists in the database
-            try
-            {
-                return ExecuteStoredProcedureNonQuery(SP_MARK_TODO_INCOMPLETE, new { Id = id }) > 0;
-            }
-            catch
-            {
-                // Fallback to EF Core if the stored procedure doesn't exist
-                var todo = _dbSet.Find(id);
-                if (todo == null)
-                    return false;
-                    
-                todo.IsCompleted = false;
-                todo.UpdatedAt = DateTime.UtcNow;
-                
-                return _dbContext.SaveChanges() > 0;
-            }
-        }
-        
-        /// <inheritdoc />
-        public override Todo Add(Todo todo)
-        {
-            // Use the stored procedure for adding a todo
-            todo.CreatedAt = DateTime.UtcNow;
-            todo.UpdatedAt = DateTime.UtcNow;
-            
-            // Using stored procedure to add
-            var id = ExecuteStoredProcedureScalar<int>(SP_CREATE_TODO, new 
-            {
-                todo.Title,
-                todo.Description,
-                todo.IsCompleted,
-                todo.CreatedAt,
-                todo.UpdatedAt
-            });
-            
-            todo.Id = id;
-            return todo;
-            
-            // Fallback to EF Core if needed
-            /*
-            _dbSet.Add(todo);
-            _dbContext.SaveChanges();
-            return todo;
-            */
-        }
-        
-        /// <inheritdoc />
-        public override bool Update(Todo todo)
-        {
-            // Use stored procedure to update the todo
-            return ExecuteStoredProcedureNonQuery(SP_UPDATE_TODO, new
-            {
-                todo.Id,
-                todo.Title,
-                todo.Description,
-                todo.IsCompleted,
-                UpdatedAt = DateTime.UtcNow
-            }) > 0;
-            
-            // Fallback to EF Core if needed
-            /*
-            var existingTodo = _dbSet.Find(todo.Id);
-            if (existingTodo == null)
-                return false;
-                
-            existingTodo.Title = todo.Title;
-            existingTodo.Description = todo.Description;
-            existingTodo.IsCompleted = todo.IsCompleted;
-            existingTodo.UpdatedAt = DateTime.UtcNow;
-            
-            return _dbContext.SaveChanges() > 0;
-            */
+                    var result = await _dbContext.SaveChangesAsync() > 0;
+                    _logger.LogInformation("EF Core update result: {Result}", result);
+                    return result;
+                }
+            );
         }
     }
 } 

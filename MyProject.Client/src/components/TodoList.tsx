@@ -26,37 +26,57 @@ export function TodoList() {
     <div className="todo-container">
       <h2>Todo List</h2>
       
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error" role="alert">{error}</div>}
       
       <div className="add-todo">
         <input
           type="text"
           value={newTodoTitle}
           onChange={(e) => setNewTodoTitle(e.target.value)}
-          placeholder="Add new todo"
+          placeholder="What needs to be done?"
           onKeyPress={handleKeyPress}
+          aria-label="New todo title"
         />
-        <button onClick={addTodo}>Add</button>
+        <button 
+          onClick={addTodo}
+          disabled={!newTodoTitle.trim()}
+          aria-label="Add todo"
+        >
+          Add
+        </button>
       </div>
       
       {loading ? (
-        <p>Loading todos...</p>
+        <div className="loading-indicator">Loading todos...</div>
       ) : (
-        <ul className="todo-list">
+        <ul className="todo-list" role="list">
           {todos.length === 0 ? (
             <li className="empty-list">No todos yet. Add one above!</li>
           ) : (
             todos.map((todo) => (
-              <li key={todo.id} className={todo.isCompleted ? 'completed' : ''}>
-                <span 
+              <li 
+                key={todo.id} 
+                className={todo.isCompleted ? 'completed' : ''}
+              >
+                <div 
                   className="todo-title"
                   onClick={() => toggleTodoCompletion(todo.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleTodoCompletion(todo.id);
+                    }
+                  }}
+                  role="checkbox"
+                  aria-checked={todo.isCompleted}
+                  tabIndex={0}
                 >
                   {todo.title}
-                </span>
+                </div>
                 <button 
                   className="delete-btn" 
                   onClick={() => deleteTodo(todo.id)}
+                  aria-label={`Delete todo: ${todo.title}`}
                 >
                   Delete
                 </button>

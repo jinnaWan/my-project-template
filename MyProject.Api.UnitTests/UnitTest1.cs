@@ -6,6 +6,11 @@ namespace MyProject.Api.UnitTests;
 /// - Controllers/WeatherForecastControllerTests.cs
 /// - Services/TodoServiceTests.cs
 /// - Services/WeatherForecastServiceTests.cs
+/// - Data/TodoRepositoryTests.cs (using TestTodoRepository)
+/// - Data/UserRepositoryTests.cs (using TestUserRepository)
+/// - Data/ApplicationDbContextTests.cs
+/// - Data/BaseRepositoryTests.cs (tests for generic repository functionality)
+/// - Data/StoredProcedureRepositoryTests.cs (tests for stored procedure functionality)
 /// </summary>
 public class PlaceholderTests
 {

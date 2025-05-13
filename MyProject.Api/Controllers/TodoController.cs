@@ -29,18 +29,18 @@ public class TodoController : ControllerBase
     /// Gets all Todo items
     /// </summary>
     /// <returns>A collection of Todo items</returns>
-    [HttpGet]
-    public ActionResult<IEnumerable<Todo>> GetAll()
+    [HttpGet(Name = "GetAllTodos")]
+    public async Task<ActionResult<IEnumerable<Todo>>> GetAllAsync()
     {
         try
         {
-            var todos = _todoService.GetAllTodos();
+            var todos = await _todoService.GetAllTodosAsync();
             return Ok(todos);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting all todos");
-            return StatusCode(500, "An error occurred while retrieving todos");
+            _logger.LogError(ex, "Unexpected error in GetAllAsync");
+            return StatusCode(500, "An unexpected error occurred");
         }
     }
 
@@ -49,23 +49,23 @@ public class TodoController : ControllerBase
     /// </summary>
     /// <param name="id">The Todo item identifier</param>
     /// <returns>The Todo item if found</returns>
-    [HttpGet("{id}")]
-    public ActionResult<Todo> GetById(int id)
+    [HttpGet("{id}", Name = "GetTodoById")]
+    public async Task<ActionResult<Todo>> GetByIdAsync(int id)
     {
         try
         {
-            var todo = _todoService.GetTodoById(id);
+            var todo = await _todoService.GetTodoByIdAsync(id);
             if (todo == null)
             {
-                return NotFound($"Todo with ID {id} not found");
+                return NotFound();
             }
 
             return Ok(todo);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting todo with ID {Id}", id);
-            return StatusCode(500, "An error occurred while retrieving the todo");
+            _logger.LogError(ex, "Unexpected error in GetByIdAsync");
+            return StatusCode(500, "An unexpected error occurred");
         }
     }
 
@@ -74,13 +74,13 @@ public class TodoController : ControllerBase
     /// </summary>
     /// <param name="todo">The Todo item to create</param>
     /// <returns>The created Todo item</returns>
-    [HttpPost]
-    public ActionResult<Todo> Create(Todo todo)
+    [HttpPost(Name = "CreateTodo")]
+    public async Task<ActionResult<Todo>> CreateAsync(Todo todo)
     {
         try
         {
-            var createdTodo = _todoService.CreateTodo(todo);
-            return CreatedAtAction(nameof(GetById), new { id = createdTodo.Id }, createdTodo);
+            var createdTodo = await _todoService.CreateTodoAsync(todo);
+            return CreatedAtRoute("GetTodoById", new { id = createdTodo.Id }, createdTodo);
         }
         catch (ArgumentException ex)
         {
@@ -88,8 +88,8 @@ public class TodoController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating todo");
-            return StatusCode(500, "An error occurred while creating the todo");
+            _logger.LogError(ex, "Unexpected error in CreateAsync");
+            return StatusCode(500, "An unexpected error occurred");
         }
     }
 
@@ -99,8 +99,8 @@ public class TodoController : ControllerBase
     /// <param name="id">The identifier of the Todo item to update</param>
     /// <param name="todo">The updated Todo item</param>
     /// <returns>No content if successful</returns>
-    [HttpPut("{id}")]
-    public IActionResult Update(int id, Todo todo)
+    [HttpPut("{id}", Name = "UpdateTodo")]
+    public async Task<IActionResult> UpdateAsync(int id, Todo todo)
     {
         if (id != todo.Id)
         {
@@ -109,10 +109,10 @@ public class TodoController : ControllerBase
 
         try
         {
-            var success = _todoService.UpdateTodo(todo);
+            var success = await _todoService.UpdateTodoAsync(todo);
             if (!success)
             {
-                return NotFound($"Todo with ID {id} not found");
+                return NotFound();
             }
 
             return NoContent();
@@ -123,8 +123,8 @@ public class TodoController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating todo with ID {Id}", id);
-            return StatusCode(500, "An error occurred while updating the todo");
+            _logger.LogError(ex, "Unexpected error in UpdateAsync");
+            return StatusCode(500, "An unexpected error occurred");
         }
     }
 
@@ -133,23 +133,23 @@ public class TodoController : ControllerBase
     /// </summary>
     /// <param name="id">The identifier of the Todo item to delete</param>
     /// <returns>No content if successful</returns>
-    [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    [HttpDelete("{id}", Name = "DeleteTodo")]
+    public async Task<IActionResult> DeleteAsync(int id)
     {
         try
         {
-            var success = _todoService.DeleteTodo(id);
+            var success = await _todoService.DeleteTodoAsync(id);
             if (!success)
             {
-                return NotFound($"Todo with ID {id} not found");
+                return NotFound();
             }
 
             return NoContent();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting todo with ID {Id}", id);
-            return StatusCode(500, "An error occurred while deleting the todo");
+            _logger.LogError(ex, "Unexpected error in DeleteAsync");
+            return StatusCode(500, "An unexpected error occurred");
         }
     }
 } 

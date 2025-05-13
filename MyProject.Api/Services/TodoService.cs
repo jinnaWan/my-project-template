@@ -1,5 +1,6 @@
 using MyProject.Api.Data.Repositories;
 using MyProject.Api.Models;
+using Microsoft.Extensions.Logging;
 
 namespace MyProject.Api.Services;
 
@@ -9,160 +10,204 @@ namespace MyProject.Api.Services;
 public class TodoService : ITodoService
 {
     private readonly ITodoRepository _todoRepository;
+    private readonly ILogger<TodoService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the TodoService class
     /// </summary>
     /// <param name="todoRepository">The todo repository</param>
-    public TodoService(ITodoRepository todoRepository)
+    /// <param name="logger">The logger instance</param>
+    public TodoService(ITodoRepository todoRepository, ILogger<TodoService> logger)
     {
         // some comments
         _todoRepository = todoRepository;
+        _logger = logger;
     }
 
     /// <inheritdoc />
     public async Task<IEnumerable<Todo>> GetAllTodosAsync()
     {
-        return await _todoRepository.GetAllAsync();
+        try
+        {
+            _logger.LogInformation("Getting all todos");
+            return await _todoRepository.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all todos");
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<IEnumerable<Todo>> GetCompletedTodosAsync()
     {
-        return await _todoRepository.GetCompletedAsync();
+        try
+        {
+            _logger.LogInformation("Getting completed todos");
+            return await _todoRepository.GetCompletedAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting completed todos");
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<IEnumerable<Todo>> GetIncompleteTodosAsync()
     {
-        return await _todoRepository.GetIncompleteAsync();
+        try
+        {
+            _logger.LogInformation("Getting incomplete todos");
+            return await _todoRepository.GetIncompleteAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting incomplete todos");
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<Todo?> GetTodoByIdAsync(int id)
     {
-        return await _todoRepository.GetByIdAsync(id);
+        try
+        {
+            _logger.LogInformation("Getting todo with ID {Id}", id);
+            var todo = await _todoRepository.GetByIdAsync(id);
+            
+            if (todo == null)
+            {
+                _logger.LogWarning("Todo with ID {Id} not found", id);
+            }
+            
+            return todo;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting todo with ID {Id}", id);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<Todo> CreateTodoAsync(Todo todo)
     {
+        if (todo == null)
+        {
+            throw new ArgumentNullException(nameof(todo));
+        }
+        
         // Validation logic can be added here
         if (string.IsNullOrWhiteSpace(todo.Title))
         {
+            _logger.LogWarning("Attempted to create todo with empty title");
             throw new ArgumentException("Todo title cannot be empty.", nameof(todo));
         }
 
-        return await _todoRepository.AddAsync(todo);
+        try
+        {
+            _logger.LogInformation("Creating new todo with title '{Title}'", todo.Title);
+            return await _todoRepository.AddAsync(todo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating todo with title '{Title}'", todo.Title);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<bool> UpdateTodoAsync(Todo todo)
     {
+        if (todo == null)
+        {
+            throw new ArgumentNullException(nameof(todo));
+        }
+        
         // Validation logic can be added here
         if (string.IsNullOrWhiteSpace(todo.Title))
         {
+            _logger.LogWarning("Attempted to update todo with empty title");
             throw new ArgumentException("Todo title cannot be empty.", nameof(todo));
         }
 
-        return await _todoRepository.UpdateAsync(todo);
+        try
+        {
+            _logger.LogInformation("Updating todo with ID {Id}", todo.Id);
+            return await _todoRepository.UpdateAsync(todo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating todo with ID {Id}", todo.Id);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<bool> DeleteTodoAsync(int id)
     {
-        return await _todoRepository.DeleteAsync(id);
+        try
+        {
+            _logger.LogInformation("Deleting todo with ID {Id}", id);
+            var result = await _todoRepository.DeleteAsync(id);
+            
+            if (!result)
+            {
+                _logger.LogWarning("Todo with ID {Id} not found for deletion", id);
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting todo with ID {Id}", id);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<bool> MarkAsCompletedAsync(int id)
     {
-        return await _todoRepository.MarkAsCompletedAsync(id);
+        try
+        {
+            _logger.LogInformation("Marking todo with ID {Id} as completed", id);
+            var result = await _todoRepository.MarkAsCompletedAsync(id);
+            
+            if (!result)
+            {
+                _logger.LogWarning("Todo with ID {Id} not found for marking as completed", id);
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking todo with ID {Id} as completed", id);
+            throw;
+        }
     }
 
     /// <inheritdoc />
     public async Task<bool> MarkAsIncompleteAsync(int id)
     {
-        return await _todoRepository.MarkAsIncompleteAsync(id);
-    }
-
-    /// <inheritdoc />
-    public IEnumerable<Todo> GetAllTodos()
-    {
-        return _todoRepository.GetAll();
-    }
-
-    /// <summary>
-    /// Gets all completed Todo items
-    /// </summary>
-    /// <returns>A collection of completed Todo items</returns>
-    public IEnumerable<Todo> GetCompletedTodos()
-    {
-        return _todoRepository.GetCompleted();
-    }
-
-    /// <summary>
-    /// Gets all incomplete Todo items
-    /// </summary>
-    /// <returns>A collection of incomplete Todo items</returns>
-    public IEnumerable<Todo> GetIncompleteTodos()
-    {
-        return _todoRepository.GetIncomplete();
-    }
-
-    /// <inheritdoc />
-    public Todo? GetTodoById(int id)
-    {
-        return _todoRepository.GetById(id);
-    }
-
-    /// <inheritdoc />
-    public Todo CreateTodo(Todo todo)
-    {
-        // Validation logic can be added here
-        if (string.IsNullOrWhiteSpace(todo.Title))
+        try
         {
-            throw new ArgumentException("Todo title cannot be empty.", nameof(todo));
+            _logger.LogInformation("Marking todo with ID {Id} as incomplete", id);
+            var result = await _todoRepository.MarkAsIncompleteAsync(id);
+            
+            if (!result)
+            {
+                _logger.LogWarning("Todo with ID {Id} not found for marking as incomplete", id);
+            }
+            
+            return result;
         }
-
-        return _todoRepository.Add(todo);
-    }
-
-    /// <inheritdoc />
-    public bool UpdateTodo(Todo todo)
-    {
-        // Validation logic can be added here
-        if (string.IsNullOrWhiteSpace(todo.Title))
+        catch (Exception ex)
         {
-            throw new ArgumentException("Todo title cannot be empty.", nameof(todo));
+            _logger.LogError(ex, "Error marking todo with ID {Id} as incomplete", id);
+            throw;
         }
-
-        return _todoRepository.Update(todo);
-    }
-
-    /// <inheritdoc />
-    public bool DeleteTodo(int id)
-    {
-        return _todoRepository.Delete(id);
-    }
-
-    /// <summary>
-    /// Marks a Todo item as completed
-    /// </summary>
-    /// <param name="id">The Todo item identifier</param>
-    /// <returns>True if the operation was successful; otherwise false</returns>
-    public bool MarkAsCompleted(int id)
-    {
-        return _todoRepository.MarkAsCompleted(id);
-    }
-
-    /// <summary>
-    /// Marks a Todo item as incomplete
-    /// </summary>
-    /// <param name="id">The Todo item identifier</param>
-    /// <returns>True if the operation was successful; otherwise false</returns>
-    public bool MarkAsIncomplete(int id)
-    {
-        return _todoRepository.MarkAsIncomplete(id);
     }
 } 
